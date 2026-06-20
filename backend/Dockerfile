@@ -8,28 +8,28 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Install dependencies first to leverage Docker layer caching
+# Install dependencies first — separate layer so code changes don't re-install
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Copy application code and startup script
 COPY app ./app
+COPY start.sh ./start.sh
 
-# Run as a non-root user
-RUN useradd --create-home --uid 1000 appuser
+# Make startup script executable
+RUN chmod +x start.sh
+
+# Run as a non-root user for security
+RUN useradd --create-home --uid 1000 appuser && \
+    chown -R appuser:appuser /app
 USER appuser
 
 EXPOSE 8000
 
-# Container-level health check hitting the API's /health endpoint
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD python -c "import urllib.request,sys; \
-sys.exit(0) if urllib.request.urlopen('http://127.0.0.1:8000/health').status==200 else sys.exit(1)"
+# Container-level health check: hits the /health endpoint
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD python -c \
+        "import urllib.request,sys; r=urllib.request.urlopen('http://127.0.0.1:8000/health',timeout=3); sys.exit(0 if r.status==200 else 1)"
 
-# Bind to $PORT when provided (Render injects it); default to 8000 locally.
-# Use the shell form so ${PORT:-8000} is expanded at runtime.
-CMD gunicorn app.main:app \
-    -k uvicorn.workers.UvicornWorker \
-    -b 0.0.0.0:${PORT:-8000} \
-    --workers ${WEB_CONCURRENCY:-2} \
-    --timeout 60
+# start.sh: waits for Postgres, then execs gunicorn
+CMD ["./start.sh"]
