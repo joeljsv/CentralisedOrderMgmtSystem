@@ -1,8 +1,22 @@
 """Pydantic v2 request/response schemas with validation."""
 from datetime import datetime
 from decimal import Decimal
+from typing import Generic, Literal, TypeVar
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+
+T = TypeVar("T")
+
+
+# --------------------------------------------------------------------------- #
+# Pagination
+# --------------------------------------------------------------------------- #
+class PaginatedResponse(BaseModel, Generic[T]):
+    items: list[T]
+    total: int
+    page: int
+    pages: int
+    limit: int
 
 
 # --------------------------------------------------------------------------- #
@@ -101,6 +115,10 @@ class OrderRead(BaseModel):
     items: list[OrderItemRead]
 
 
+class StatusUpdate(BaseModel):
+    status: Literal["shipped", "delivered", "cancelled"]
+
+
 # --------------------------------------------------------------------------- #
 # Dashboard
 # --------------------------------------------------------------------------- #
@@ -112,9 +130,16 @@ class LowStockProduct(BaseModel):
     quantity: int
 
 
+class OrderStatusCount(BaseModel):
+    status: str
+    count: int
+
+
 class DashboardSummary(BaseModel):
     total_products: int
     total_customers: int
     total_orders: int
     low_stock_threshold: int
     low_stock_products: list[LowStockProduct]
+    order_status_counts: list[OrderStatusCount]
+    stock_chart: list[LowStockProduct]

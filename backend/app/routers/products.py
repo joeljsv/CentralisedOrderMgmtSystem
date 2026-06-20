@@ -1,7 +1,10 @@
-from fastapi import APIRouter, Depends, status
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from .. import crud, schemas
+from ..config import settings
 from ..database import get_db
 
 router = APIRouter(prefix="/products", tags=["products"])
@@ -12,9 +15,34 @@ def create_product(payload: schemas.ProductCreate, db: Session = Depends(get_db)
     return crud.create_product(db, payload)
 
 
-@router.get("", response_model=list[schemas.ProductRead])
-def list_products(db: Session = Depends(get_db)):
-    return crud.list_products(db)
+@router.get("", response_model=schemas.PaginatedResponse[schemas.ProductRead])
+def list_products(
+    search: Annotated[str | None, Query(max_length=200)] = None,
+    min_price: Annotated[float | None, Query(ge=0)] = None,
+    max_price: Annotated[float | None, Query(ge=0)] = None,
+    low_stock: bool = False,
+    sort_by: Annotated[str, Query()] = "name",
+    sort_dir: Annotated[str, Query(pattern="^(asc|desc)$")] = "asc",
+    page: Annotated[int, Query(ge=1)] = 1,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    db: Session = Depends(get_db),
+):
+    result = crud.list_products(
+        db,
+        search=search,
+        min_price=min_price,
+        max_price=max_price,
+        low_stock=low_stock,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
+        page=page,
+        limit=limit,
+        low_stock_threshold=settings.low_stock_threshold,
+    )
+    return {
+        **result,
+        "items": [schemas.ProductRead.model_validate(p) for p in result["items"]],
+    }
 
 
 @router.get("/{product_id}", response_model=schemas.ProductRead)

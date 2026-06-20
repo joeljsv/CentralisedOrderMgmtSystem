@@ -6,8 +6,10 @@ from . import models
 
 
 def seed_if_empty(db: Session) -> None:
-    has_products = db.scalar(select(func.count(models.Product.id))) or 0
-    if has_products:
+    # Bail out if ANY seeded table already has rows — handles partial-state
+    # across container restarts against the persisted named volume.
+    if db.scalar(select(func.count(models.Product.id))) or \
+       db.scalar(select(func.count(models.Customer.id))):
         return
 
     products = [
