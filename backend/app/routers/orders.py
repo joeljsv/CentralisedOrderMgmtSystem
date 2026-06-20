@@ -45,7 +45,7 @@ def list_orders(
     sort_by: Annotated[str, Query()] = "created_at",
     sort_dir: Annotated[str, Query(pattern="^(asc|desc)$")] = "desc",
     page: Annotated[int, Query(ge=1)] = 1,
-    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    limit: Annotated[int, Query(ge=1, le=500)] = 20,
     db: Session = Depends(get_db),
 ):
     result = crud.list_orders(

@@ -42,7 +42,7 @@ def list_customers(
     sort_by: Annotated[str, Query()] = "full_name",
     sort_dir: Annotated[str, Query(pattern="^(asc|desc)$")] = "asc",
     page: Annotated[int, Query(ge=1)] = 1,
-    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    limit: Annotated[int, Query(ge=1, le=500)] = 20,
     db: Session = Depends(get_db),
 ):
     result = crud.list_customers(
